@@ -1,0 +1,367 @@
+# PriceWatch 📊
+
+Historical competitor price intelligence from the Internet Archive Wayback Machine.
+
+## Overview
+
+PriceWatch is a production-ready tool that tracks competitor pricing over time by analyzing archived snapshots of their pricing pages. It provides multiple interfaces for different use cases:
+
+- **Python Library**: Programmatic access for integration
+- **CLI Tool**: Quick terminal-based analysis
+- **Streamlit Web App**: Interactive, self-hosted web interface
+
+## Features
+
+### Multi-Stage Price Extraction
+- **Regex-based**: Fast pattern matching for common price formats
+- **DOM parsing**: Heuristic analysis of HTML structure
+- **LLM fallback**: Local LLM (Ollama) for ambiguous cases
+
+### Flexible Sampling
+- Quarterly, monthly, or annual snapshots
+- Intelligent nearest-snapshot selection
+- Configurable tolerance for date matching
+
+### Multiple Output Formats
+- Interactive time-series charts (Plotly)
+- Clean tabular views
+- CSV export for spreadsheets
+- Excel export with formatting and charts
+
+## Installation
+
+### Prerequisites
+- Python 3.10+
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+
+### Using uv (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/yourcompany/pricewatch.git
+cd pricewatch
+
+# Create virtual environment and install
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e .
+
+# Install optional dependencies
+uv pip install -e ".[streamlit,export,llm]"
+```
+
+### Using pip
+
+```bash
+pip install -e .
+pip install -e ".[streamlit,export,llm]"  # Optional features
+```
+
+### Optional: Ollama for LLM Extraction
+
+If you want LLM-assisted extraction:
+
+1. Install [Ollama](https://ollama.ai/)
+2. Pull a model: `ollama pull llama3.2`
+3. Ensure Ollama is running: `ollama serve`
+
+## Quick Start
+
+### CLI
+
+Analyze a competitor's pricing page:
+
+```bash
+pricewatch analyze https://competitor.com/pricing
+```
+
+With options:
+
+```bash
+pricewatch analyze https://competitor.com/pricing \
+  --start-date 2022-01-01 \
+  --end-date 2024-12-31 \
+  --interval quarterly \
+  --export-csv results.csv \
+  --use-llm
+```
+
+List available snapshots:
+
+```bash
+pricewatch snapshots https://competitor.com/pricing
+```
+
+### Streamlit App
+
+Launch the web interface:
+
+```bash
+streamlit run streamlit_app/app.py
+```
+
+Then open http://localhost:8501 in your browser.
+
+### Python Library
+
+```python
+from datetime import datetime, timedelta
+from pricewatch import WaybackClient, SnapshotSampler, PriceExtractor
+from pricewatch.core.models import PriceTimeSeries
+
+# Initialize
+client = WaybackClient()
+sampler = SnapshotSampler(client)
+extractor = PriceExtractor(use_llm=False)
+
+# Get quarterly snapshots
+url = "https://competitor.com/pricing"
+start_date = datetime.now() - timedelta(days=730)
+snapshots = sampler.get_quarterly_snapshots(url, start_date)
+
+# Extract prices
+price_snapshots = []
+for snapshot in snapshots:
+    html = client.fetch_html(snapshot)
+    ps = extractor.extract_from_snapshot(snapshot, html)
+    price_snapshots.append(ps)
+
+# Build time series
+timeseries = PriceTimeSeries(
+    url=url,
+    snapshots=price_snapshots,
+    start_date=start_date,
+    end_date=datetime.now(),
+    total_snapshots=len(snapshots),
+    successful_extractions=sum(1 for ps in price_snapshots if ps.has_prices)
+)
+
+# Convert to DataFrame for analysis
+df = timeseries.to_dataframe()
+print(df)
+
+# Export
+from pricewatch.export.csv_export import CSVExporter
+CSVExporter.export_timeseries(timeseries, Path("output.csv"))
+```
+
+## CLI Commands
+
+### `pricewatch analyze`
+
+Analyze historical pricing for a URL.
+
+**Arguments:**
+- `URL`: Product/pricing page URL
+
+**Options:**
+- `--start-date YYYY-MM-DD`: Start date (default: 2 years ago)
+- `--end-date YYYY-MM-DD`: End date (default: today)
+- `--interval [monthly|quarterly|annual]`: Sampling interval (default: quarterly)
+- `--use-llm / --no-llm`: Enable LLM extraction (default: disabled)
+- `--llm-model TEXT`: Ollama model name (default: llama3.2)
+- `--export-csv PATH`: Export results to CSV
+- `--export-excel PATH`: Export results to Excel
+- `--show-table / --no-table`: Display results table (default: yes)
+
+**Examples:**
+
+```bash
+# Basic analysis
+pricewatch analyze https://example.com/pricing
+
+# Export to CSV
+pricewatch analyze https://example.com/pricing --export-csv prices.csv
+
+# Monthly intervals with LLM
+pricewatch analyze https://example.com/pricing \
+  --interval monthly \
+  --use-llm \
+  --llm-model llama3.2
+```
+
+### `pricewatch snapshots`
+
+List available Wayback Machine snapshots for a URL.
+
+**Arguments:**
+- `URL`: Target URL
+
+**Example:**
+
+```bash
+pricewatch snapshots https://example.com/pricing
+```
+
+## Architecture
+
+```
+PriceWatch
+├── Core Library (pricewatch/)
+│   ├── Wayback Client: CDX API + HTML fetching
+│   ├── Sampler: Quarterly/monthly/annual sampling
+│   ├── Extractor Pipeline:
+│   │   ├── Regex (fast, good precision)
+│   │   ├── DOM (structure-aware)
+│   │   └── LLM (fallback for ambiguous pages)
+│   └── Data Models: Pydantic schemas
+│
+├── CLI (pricewatch/cli/)
+│   └── Rich terminal interface
+│
+├── Streamlit App (streamlit_app/)
+│   └── Interactive web UI
+│
+└── Export (pricewatch/export/)
+    ├── CSV
+    └── Excel (with charts)
+```
+
+## Configuration
+
+### Rate Limiting
+
+The Wayback Client includes built-in rate limiting (0.5s between requests by default):
+
+```python
+client = WaybackClient(rate_limit=1.0)  # 1 second between requests
+```
+
+### LLM Configuration
+
+```python
+from pricewatch.extractors.llm_extractor import LLMPriceExtractor
+
+extractor = LLMPriceExtractor(
+    ollama_model="llama3.2",
+    ollama_host="http://localhost:11434"
+)
+```
+
+## Data Models
+
+### ExtractedPrice
+
+```python
+class ExtractedPrice(BaseModel):
+    value: float
+    currency: Currency  # USD, EUR, GBP, etc.
+    price_type: PriceType  # monthly, annual, one_time
+    tier_name: Optional[str]  # "Professional", "Enterprise", etc.
+    raw_text: str
+    confidence: float  # 0.0 to 1.0
+    extraction_method: ExtractionMethod  # regex, dom, llm
+```
+
+### PriceSnapshot
+
+```python
+class PriceSnapshot(BaseModel):
+    snapshot: Snapshot
+    prices: List[ExtractedPrice]
+    html_length: int
+    extraction_time_ms: float
+    errors: List[str]
+```
+
+### PriceTimeSeries
+
+```python
+class PriceTimeSeries(BaseModel):
+    url: str
+    snapshots: List[PriceSnapshot]
+    start_date: datetime
+    end_date: datetime
+    total_snapshots: int
+    successful_extractions: int
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert to pandas DataFrame"""
+```
+
+## Assumptions & Limitations
+
+### Assumptions
+
+1. **Wayback Machine Coverage**: Assumes the target URL has been archived
+2. **Price Display**: Prices are displayed as text on the page (not in images/videos)
+3. **USD Default**: Defaults to USD when currency is ambiguous
+4. **Quarterly Sampling**: Best balance of coverage vs. API load
+
+### Limitations
+
+1. **Wayback API Rate Limits**: Built-in 0.5s delay between requests
+2. **JavaScript-Heavy Sites**: May miss dynamically loaded prices
+3. **Paywalled Content**: Cannot access content behind authentication
+4. **Currency Conversion**: No automatic exchange rate conversion (yet)
+5. **LLM Availability**: LLM extraction requires local Ollama installation
+
+### Known Issues
+
+- Very old snapshots (pre-2010) may have inconsistent formatting
+- Pages with complex React/Vue rendering may need LLM extraction
+- Extremely high-frequency price changes (daily) may be missed with quarterly sampling
+
+## Future Extensions
+
+### High Priority
+- [ ] Automated currency conversion using historical exchange rates
+- [ ] Support for headless browser (Playwright/Selenium) for JS-heavy sites
+- [ ] Competitor comparison dashboard (multiple URLs side-by-side)
+- [ ] Price change alerts/notifications
+
+### Medium Priority
+- [ ] API endpoint (FastAPI) for team-wide deployment
+- [ ] Database storage (PostgreSQL) for historical data
+- [ ] Scheduled jobs for automatic monitoring
+- [ ] Advanced analytics (price change velocity, seasonality detection)
+
+### Nice to Have
+- [ ] OCR for prices in images
+- [ ] Multi-language support
+- [ ] Screenshot capture of pricing pages
+- [ ] Integration with business intelligence tools (Tableau, PowerBI)
+
+## Development
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Code Quality
+
+```bash
+# Format code
+black pricewatch/
+
+# Lint
+ruff pricewatch/
+
+# Type checking
+mypy pricewatch/
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Support
+
+- Issues: https://github.com/yourcompany/pricewatch/issues
+- Internal wiki: [link to internal docs]
+- Slack: #pricewatch-support
+
+## Acknowledgments
+
+- Internet Archive Wayback Machine for providing historical web data
+- Ollama for local LLM capabilities

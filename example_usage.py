@@ -8,7 +8,7 @@ from pricewatch import (
     PriceExtractor,
     PriceTimeSeries
 )
-from pricewatch.export.csv_export import CSVExporter, ExcelExporter
+from pricewatch.export.modules import CSVExporter, ExcelExporter
 
 
 def main():

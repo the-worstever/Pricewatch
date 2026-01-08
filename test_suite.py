@@ -2,8 +2,8 @@
 import pytest
 from datetime import datetime
 
-from pricewatch.extractors.regex_extractor import RegexPriceExtractor
-from pricewatch.extractors.dom_extractor import DOMPriceExtractor
+from pricewatch.extractors.regex import RegexPriceExtractor
+from pricewatch.extractors.dom import DOMPriceExtractor
 from pricewatch.core.models import Currency, PriceType
 
 

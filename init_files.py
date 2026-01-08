@@ -57,9 +57,9 @@ __all__ = [
 """
 pricewatch/extractors/__init__.py
 """
-from .regex_extractor import RegexPriceExtractor
-from .dom_extractor import DOMPriceExtractor
-from .llm_extractor import LLMPriceExtractor
+from .regex import RegexPriceExtractor
+from .dom import DOMPriceExtractor
+from .llm import LLMPriceExtractor
 
 __all__ = [
     'RegexPriceExtractor',
@@ -71,7 +71,7 @@ __all__ = [
 """
 pricewatch/export/__init__.py
 """
-from .csv_export import CSVExporter, ExcelExporter
+from .modules import CSVExporter, ExcelExporter
 
 __all__ = ['CSVExporter', 'ExcelExporter']
 

@@ -13,7 +13,7 @@ from pricewatch.core.wayback import WaybackClient
 from pricewatch.core.sampling import SnapshotSampler
 from pricewatch.core.extractor import PriceExtractor
 from pricewatch.core.models import PriceTimeSeries
-from pricewatch.export.csv_export import CSVExporter
+from pricewatch.export.modules import CSVExporter
 
 
 # Page config

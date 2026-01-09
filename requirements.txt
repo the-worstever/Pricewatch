@@ -1,0 +1,10 @@
+requests
+beautifulsoup4
+lxml
+pandas
+click
+rich
+python-dateutil
+plotly
+pydantic
+httpx

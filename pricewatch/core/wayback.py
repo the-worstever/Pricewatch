@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import List, Optional
 from urllib.parse import quote
 import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from .models import Snapshot
 
@@ -11,7 +13,7 @@ from .models import Snapshot
 class WaybackClient:
     """Client for interacting with Wayback Machine CDX API."""
     
-    CDX_API = "http://web.archive.org/cdx/search/cdx"
+    CDX_API = "https://web.archive.org/cdx/search/cdx"
     WAYBACK_PREFIX = "https://web.archive.org/web"
     
     def __init__(self, rate_limit: float = 0.5):
@@ -24,8 +26,24 @@ class WaybackClient:
         self.rate_limit = rate_limit
         self._last_request = 0.0
         self.session = requests.Session()
+        
+        # Configure connection pooling with retries
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,  # Wait 1s, 2s, 4s between retries
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "HEAD"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=1, pool_maxsize=1)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+        
         self.session.headers.update({
-            'User-Agent': 'PriceWatch/0.1.0 (Market Intelligence Tool)'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
         })
     
     def _rate_limit_sleep(self):
@@ -72,7 +90,7 @@ class WaybackClient:
             params['limit'] = limit
         
         try:
-            response = self.session.get(self.CDX_API, params=params, timeout=30)
+            response = self.session.get(self.CDX_API, params=params, timeout=(10, 60))
             response.raise_for_status()
             
             data = response.json()
@@ -160,7 +178,7 @@ class WaybackClient:
             # Use id_ modifier to get raw content without Wayback toolbar
             clean_url = snapshot.wayback_url
             
-            response = self.session.get(clean_url, timeout=30)
+            response = self.session.get(clean_url, timeout=(10, 60))
             response.raise_for_status()
             
             return response.text

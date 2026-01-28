@@ -19,14 +19,84 @@ from pricewatch.export.modules import CSVExporter
 # Page config
 st.set_page_config(
     page_title="PriceWatch - Competitor Price Intelligence",
-    page_icon="📊",
-    layout="wide"
+    page_icon="�",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# Custom CSS for modern, elegant styling
+st.markdown("""
+<style>
+    :root {
+        --primary-color: #0f172a;
+        --secondary-color: #1e293b;
+        --accent-color: #3b82f6;
+        --text-color: #f1f5f9;
+    }
+    
+    /* Header styling */
+    h1 {
+        font-weight: 600;
+        letter-spacing: -0.5px;
+        color: var(--text-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    h2, h3 {
+        font-weight: 500;
+        color: var(--text-color);
+    }
+    
+    /* Sidebar styling */
+    [data-testid="sidebar"] {
+        background-color: var(--secondary-color);
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        border-radius: 6px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        transition: all 0.2s ease;
+    }
+    
+    /* Input styling */
+    .stTextInput > div > div > input,
+    .stDateInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 6px;
+    }
+    
+    /* Metric cards */
+    [data-testid="stMetricContainer"] {
+        background-color: var(--secondary-color);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid var(--accent-color);
+    }
+    
+    /* Tabs styling */
+    [data-testid="stTabs"] [role="tablist"] button {
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+    
+    /* Alert boxes */
+    .stAlert {
+        border-radius: 8px;
+    }
+    
+    /* Caption text */
+    .stCaption {
+        color: #94a3b8;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 
 def main():
-    st.title("📊 PriceWatch")
-    st.subheader("Historical Competitor Price Intelligence")
+    st.title("PriceWatch")
+    st.caption("Historical Competitor Price Intelligence · Powered by Wayback Machine")
     
     # Sidebar configuration
     st.sidebar.header("Configuration")
@@ -76,15 +146,15 @@ def main():
         )
     
     # Analyze button
-    analyze_button = st.sidebar.button("🔍 Analyze", type="primary", use_container_width=True)
+    analyze_button = st.sidebar.button("Analyze", type="primary", use_container_width=True)
     
     # Main content
     if not url:
-        st.info("👆 Enter a product/pricing page URL in the sidebar to get started")
+        st.info("Enter a product or pricing page URL in the sidebar to begin analysis")
         
         # Example/instructions
         st.markdown("---")
-        st.markdown("### How it works")
+        st.markdown("## How it works")
         st.markdown("""
         1. **Enter URL**: Provide a competitor's pricing or product page
         2. **Configure**: Set date range and sampling interval
@@ -95,7 +165,7 @@ def main():
         4. **Explore**: View interactive charts and export data
         """)
         
-        st.markdown("### Example URLs")
+        st.markdown("## Example URLs")
         st.markdown("""
         - SaaS pricing pages (e.g., `https://example.com/pricing`)
         - Product pages with prices
@@ -182,7 +252,7 @@ def run_analysis(url, start_date, end_date, interval, use_llm, llm_model, max_di
         # Store in session
         st.session_state.timeseries = timeseries
         
-        st.success(f"✓ Analysis complete! Success rate: {timeseries.success_rate:.1%}")
+        st.success(f"Analysis complete · Success rate: {timeseries.success_rate:.1%}")
         
     except Exception as e:
         st.error(f"Analysis failed: {e}")
@@ -194,7 +264,7 @@ def display_results(timeseries: PriceTimeSeries):
     """Display analysis results."""
     
     st.markdown("---")
-    st.header("Results")
+    st.header("Analysis Results")
     
     # Metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -214,7 +284,7 @@ def display_results(timeseries: PriceTimeSeries):
             st.metric("Average Price", "N/A")
     
     # Tabs
-    tab1, tab2, tab3 = st.tabs(["📈 Chart", "📋 Data Table", "💾 Export"])
+    tab1, tab2, tab3 = st.tabs(["Chart", "Data Table", "Export"])
     
     with tab1:
         display_chart(timeseries)
@@ -315,7 +385,7 @@ def display_data_table(timeseries: PriceTimeSeries):
     st.dataframe(display_df, use_container_width=True, height=400)
     
     # Copy to clipboard helper
-    st.info("💡 You can copy this table directly to Excel by selecting cells and pressing Ctrl+C")
+    st.caption("Tip: You can copy this table directly to Excel by selecting cells and pressing Ctrl+C")
 
 
 def display_export_options(timeseries: PriceTimeSeries):
@@ -330,7 +400,7 @@ def display_export_options(timeseries: PriceTimeSeries):
         csv = df.to_csv(index=False)
         
         st.download_button(
-            label="📥 Download CSV",
+            label="Download CSV",
             data=csv,
             file_name=f"pricewatch_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
